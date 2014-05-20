@@ -117,7 +117,7 @@ class Entity:
 
         # Schedule animation.
         if self.afps:
-            self.manager.driftwood.tick.register(self.__next_member, delay=(1000//self.afps))
+            self.manager.driftwood.tick.register(self.__next_member, delay=(1/self.afps))
 
         if "properties" in self.__entity:
             self.properties = self.__entity["properties"]
@@ -145,7 +145,7 @@ class Entity:
             (y / self.manager.driftwood.area.tilemap.tileheight) + py
         )
 
-    def __next_member(self, millis):
+    def __next_member(self, seconds):
         self.__cur_member = (self.__cur_member + 1) % len(self.members)
         self.manager.driftwood.area.changed = True
 
@@ -204,7 +204,7 @@ class TileModeEntity(Entity):
         if self.velocity == (0, 0) and self.next_velocity == (0, 0):
             self.manager.driftwood.tick.unregister(self.__process_walk)
 
-    def __process_walk(self, millis_past):
+    def __process_walk(self, seconds_past):
         """Move through tiles in a process that takes time.
         """
         # Accelerate
@@ -228,16 +228,14 @@ class TileModeEntity(Entity):
         tileheight = tilemap.tileheight
 
         x, y = self.velocity
-        tile_pos = self.tile.pos
 
-        self._partial_xy[0] += x * self.speed * millis_past / 1000
-        self._partial_xy[1] += y * self.speed * millis_past / 1000
-        self.x = int(tile_pos[0] * tilewidth + self._partial_xy[0])
-        self.y = int(tile_pos[1] * tileheight + self._partial_xy[1])
+        self._partial_xy[0] += x * self.speed * seconds_past
+        self._partial_xy[1] += y * self.speed * seconds_past
 
         # Have we arrived at our next tile?
         while True:
             x, y = self.velocity
+            tile_pos = self.tile.pos
             if x == 0 and y == 0:
                 break
             if ((x == -1 and tilewidth > -self._partial_xy[0])
@@ -278,6 +276,10 @@ class TileModeEntity(Entity):
                     self.__change_velocity(0, 0)
             elif not self.__can_walk(*self.velocity):
                 self.__change_velocity(0, 0)
+
+        tile_pos = self.tile.pos
+        self.x = int(tile_pos[0] * tilewidth + self._partial_xy[0])
+        self.y = int(tile_pos[1] * tileheight + self._partial_xy[1])
 
     def __can_walk(self, x, y):
         """Given the entity's current tile, can it move to tile in direction X, Y?
